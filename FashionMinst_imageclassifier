@@ -1,0 +1,102 @@
+!pip install opencv-python
+!pip install scikit-learn
+!pip install matplotlib
+!pip install numpy
+
+from tensorflow.keras.datasets import fashion_mnist
+import numpy as np
+
+(x_train, y_train),(x_test,y_test)= fashion_mnist.load_data()
+
+print(f"training data shape : {x_train.shape}")
+print(f"training labels shape : {y_train.shape}")
+print(f"testing data shape : {x_test.shape}")
+print(f"testing labels shape : {y_test.shape}")
+
+import matplotlib.pyplot as plt
+
+#funtion to plot the images
+def plot_initial_images(images , labels, class_names):
+  fig, axes = plt.subplots(1,10, figsize=(20,3))
+  for i in range(10):
+    ax=axes[i]
+    ax.imshow(images[i], cmap='gray')
+    ax.set_title(class_names[labels[i]])
+    ax.axis('off')
+  plt.show()
+
+#class names
+class_names=['T-shirt/top','Trouser','Pullover','Dress','Coat','sandal','Shirt',
+             'Sneaker','Bag','Ankel boot']
+
+#plot some initial images with their labels
+plot_initial_images(x_train,y_train,class_names)
+
+#normalize the pixel values
+x_train = x_train/255.0
+x_test = x_test/255.0
+
+#Reshape the images to add a channel dimension
+x_train = x_train.reshape(x_train.shape[0],28,28,1)
+x_test = x_test.reshape(x_test.shape[0],28,28,1)
+
+#Display the shape of the processed images
+print(f"Processed training data shape : {x_train.shape}")
+print(f"Processed testing data shape : {x_test.shape}")
+
+import cv2
+from skimage.feature import hog
+
+def extract_hog_features(images):
+  hog_features=[]
+  for image in images:
+    #Extract ho features
+    features = hog(image , pixels_per_cell=(4,4), cells_per_block=(2,2),visualize=False,multichannel=True)
+    hog_features.append(features)
+  return np.array(hog_features)
+
+#Extract hog features from the training and testing images
+x_train_hog=extract_hog_features(x_train)
+x_test_hog=extract_hog_features(x_test)
+
+#Display the shape of the hog features
+print(f"Training hog features shape : {x_train_hog.shape}")
+print(f"Testing hog features shape : {x_test_hog.shape}")
+
+
+from sklearn.svm import SVC
+
+#Create an SVM classifier
+svm=SVC(kernel='linear')
+
+#test the classifier
+svm.fit(x_train_hog,y_train)
+
+#Display the training accuracy
+train_accuracy=svm.score(x_train_hog,y_train)
+print(f"Training accuracy : {train_accuracy *100:.2f}%")
+
+#Evauate the model ont the testing set
+test_accuracy=svm.score(x_test_hog,y_test)
+print(f"Testing accuracy : {test_accuracy *100:.2f}%")
+
+#prediction on test set
+y_pred=svm.predict(x_test_hog)
+
+#plot the predictions
+plot_initial_images(x_test,y_pred,class_names)
+
+#function to  plot images with true and predicted labels
+def plot_output_images(images,true_labels,predicted_labels,class_names):
+  fig, axes = plt.subplots(1,10, figsize=(20,3))
+  for i in range(10):
+    ax=axes[i]
+    ax.imshow(images[i].reshape(28,28), cmap='gray')
+    ax.set_title(f"True : {class_names[true_labels[i]]}\nPred : {class_names[predicted_labels[i]]}",fontsize=10)
+    ax.axis('off')
+  plt.tight_layout()
+  plt.show()
+
+#plot the output images
+plot_output_images(x_test[:10],y_test[:10],y_pred[:10],class_names)
+
